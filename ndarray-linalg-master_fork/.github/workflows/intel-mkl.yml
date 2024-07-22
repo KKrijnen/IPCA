@@ -1,0 +1,48 @@
+name: intel-mkl
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+jobs:
+  windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >
+            --manifest-path=ndarray-linalg/Cargo.toml
+            --no-default-features
+            --features=intel-mkl-static
+
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/cargo@v1
+        name: cargo test
+        with:
+          command: test
+          args: >
+            --manifest-path=ndarray-linalg/Cargo.toml
+            --no-default-features
+            --features=intel-mkl-static
+
+  linux-container:
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/rust-math/rust-mkl:1.63.0-2020.1
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/cargo@v1
+        name: cargo test
+        with:
+          command: test
+          args: >
+            --manifest-path=ndarray-linalg/Cargo.toml
+            --no-default-features
+            --features=intel-mkl-system

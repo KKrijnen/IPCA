@@ -1,0 +1,9 @@
+
+biotrift_zscore.bin
+biotrift_zscore.json
+biotrift_zscore_result.bin
+/target
+/.git
+*.png
+Cargo.lock
+/image_output
