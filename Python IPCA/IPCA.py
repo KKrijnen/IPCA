@@ -4,44 +4,45 @@ import math
 import json 
 
 
-def batch_est_fit(pixels, features):
-    minimum_ratio = 20
-    feature_offset = 20000 - 20 * features if features < 1000 else 0
-    batch_size = features * 20 + feature_offset  # Initial Estimate
+#Attempts to find a batch size with a size to peak ratio of >19 including the final batch.
+#If after the initial batch_size of 19 * peaks the size of the last batch that has a peak ratio <19. 
+# This function will search for larger batch sizes that have a last batch that has a peak ratio >19.
+def batch_est_fit(pixels, peaks):
+    minimum_ratio = 19
+    batch_size = peaks * minimum_ratio
     trailing_batchsize = pixels % batch_size
-    trailing_batchsize_ratio = trailing_batchsize // features
+    trailing_batchsize_ratio = trailing_batchsize // peaks
 
     while trailing_batchsize_ratio < minimum_ratio and trailing_batchsize != 0:
         number_of_loops = pixels // batch_size
         loop_upperbound = math.ceil(pixels / number_of_loops)
         loop_lowerbound = math.ceil(pixels // (number_of_loops + 1))
-        trailing_treshold_difference = int((minimum_ratio * features - trailing_batchsize) / number_of_loops)
+        trailing_treshold_difference = int((minimum_ratio * peaks - trailing_batchsize) / number_of_loops) 
 
-        if trailing_treshold_difference > 0 and (batch_size - trailing_treshold_difference) >= loop_lowerbound:
+        if trailing_treshold_difference > 0 and (batch_size - trailing_treshold_difference) >= loop_lowerbound and ((batch_size - trailing_treshold_difference)/peaks) > minimum_ratio:
             batch_size -= trailing_treshold_difference
         else:
             batch_size = loop_upperbound
 
-        if batch_size > 150000:
-            batch_size = features * 21 + feature_offset  # Initial Estimate
-            break
-
         if batch_size >= pixels:
             batch_size = pixels
             break
+            
         
         trailing_batchsize = pixels % batch_size
-        trailing_batchsize_ratio = trailing_batchsize / features
+        trailing_batchsize_ratio = trailing_batchsize / peaks
     normal_iterations = int(math.floor(pixels / batch_size))
     trailing_batchsize = pixels % batch_size
     batch_array = [batch_size for i in range(0, normal_iterations)]
     if trailing_batchsize != 0:
         batch_array.append(trailing_batchsize)
-
     return batch_array
 
-def batch_est_transform(pixels, features):
-    batch_size = math.ceil(20000000 / features)
+
+#Keeps the total ammount that is loaded stable
+#Loads 80MB of data at a time 
+def batch_est_transform(pixels, peaks):
+    batch_size = math.ceil(20000000 / peaks)
     normal_iterations = int(math.floor(pixels / batch_size))
     trailing_batchsize = pixels % batch_size
     batch_array = [batch_size for i in range(0, normal_iterations)]
@@ -69,6 +70,7 @@ def MSI_IPCA(metadata, filepath):
             ipca.transform(memory_map[offset:offset + i, :]).tofile(output_file, "") 
             offset += i
             del memory_map
+    return ipca
 
 def load_metadata(file_path):
     with open((file_path + ".json")) as json_file:
