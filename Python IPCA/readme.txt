@@ -1,3 +1,5 @@
+Modifications made:
+
 I)
 Within the provided scikit-learn fork, the following edits have been made in the partial_fit() function within the _incremental_pca.py file: 
 
