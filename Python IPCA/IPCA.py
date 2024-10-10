@@ -3,7 +3,7 @@ import numpy as np
 import math
 import json 
 
-
+# Point II in modifications
 #Attempts to find a batch size with a size to peak ratio of >19 including the final batch.
 #If after the initial batch_size of 19 * peaks the size of the last batch that has a peak ratio <19. 
 # This function will search for larger batch sizes that have a last batch that has a peak ratio >19.
@@ -63,7 +63,7 @@ def MSI_IPCA(metadata, filepath):
         offset += i
         del memory_map
     offset = 0
-    #Transforms part of the data and writes it to the the output file    
+    #Point III in modifications. Iterates over the data in batches. Each batch will be is transformed and the results are saved to disk as a binary file. 
     with open(filepath + "_results.bin", 'wb') as output_file:
         for i in batch_size_transform:
             memory_map = np.memmap((filepath + ".bin"), dtype = 'float32', mode='r', shape=(metadata["number_of_spectra"], metadata["number_of_peaks"]))
