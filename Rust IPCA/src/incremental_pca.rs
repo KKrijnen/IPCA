@@ -229,33 +229,25 @@ fn sign(input: f32) -> f32{
     if input > 0.0 {1.0} else if input < 0.0 {-1.0} else{0.0}
 }
 
-/// Attempts to find optimal batch sizes. Where each batch is >20 * number of peaks. 
-/// This also must include the last batch. The batch size is not allowed to exceed 150_000.
-/// For datasets with peaks < 1000 there is a starting offset with the initial estimation.
-/// The optimal batch size is hardware and MKL dependant. (Cache size and number of cores used)
-/// 
-/// Output is a Vec<usize> of the indices of the bytes that need to be loaded.
-/// .window(2) is used over the vector containing with the start and end of what needs to be loaded
+//Attempts to find a batch size with a batch size to peak ratio of >19 including the final batch.
+//If after the initial batch_size of 19 * features the size of the last batch that has a peak ratio <19. 
+// This function will search for larger batch sizes that have a last batch that has a peak ratio >19.
 fn fit_batch_est(spectra: usize, peaks: usize) -> Vec<usize>{
-    let minimum_ratio:  usize = 20;
-    let peaks_offset = if peaks < 1000{20000 - 20 * peaks} else{0}; 
-    let mut batch_size: usize = peaks * 20 + peaks_offset;  // Initial Estimate
+    let minimum_ratio:  usize = 19;
+    let mut batch_size: usize = peaks * 20;  // Initial Estimate
     let mut trailing_batch = spectra % batch_size;
     let mut trailing_batch_ratio = trailing_batch / peaks;
-    //Attempts to find a batch size with a batch size ratio to peak of >20 that at also has a trailing batch size to peak ratio of >20
+    
+    //Attempts to find a batch size with a batch size ratio to peak of >19 that at also has a trailing batch size to peak ratio of >19
     while trailing_batch_ratio < minimum_ratio && trailing_batch != 0{
         let number_of_loops = spectra / batch_size;
-        let loop_upperbound = (spectra as f32 / number_of_loops as f32).ceil() as usize;
-        let loop_lowerbound = (spectra as f32 / (number_of_loops + 1) as f32).ceil() as usize;
-        let trailing_treshold_difference = ((minimum_ratio * peaks - trailing_batch) as f32 / number_of_loops as f32).ceil() as usize;
-        if trailing_treshold_difference > 0 && (batch_size - trailing_treshold_difference) >= loop_lowerbound{
+        let loop_upperbound = (spectra as f64 / number_of_loops as f64).ceil() as usize;
+        let loop_lowerbound = (spectra as f64 / (number_of_loops + 1) as f64).ceil() as usize;
+        let trailing_treshold_difference = ((minimum_ratio * peaks - trailing_batch) as f64 / number_of_loops as f64).ceil() as usize;
+        if trailing_treshold_difference > 0 && (batch_size - trailing_treshold_difference) >= loop_lowerbound && ((batch_size as f64 - trailing_treshold_difference as f64)/peaks as f64).ceil() as usize > minimum_ratio{
             batch_size -= trailing_treshold_difference; 
         } else{
             batch_size = loop_upperbound;
-        }
-        if batch_size > 150000{
-            batch_size = peaks * 20 + peaks_offset;  
-            break
         }
         if batch_size >= spectra{
             batch_size = spectra;
@@ -264,8 +256,9 @@ fn fit_batch_est(spectra: usize, peaks: usize) -> Vec<usize>{
         trailing_batch = spectra % batch_size;
         trailing_batch_ratio = trailing_batch / peaks;
     }
+    
     trailing_batch = spectra % batch_size;
-    let n_batches = (spectra as f32 /batch_size as f32).floor() as usize;
+    let n_batches = (spectra as f64 /batch_size as f64).floor() as usize;
     let exact = if trailing_batch == 0 {true}else{false};
 
 
@@ -282,20 +275,13 @@ fn fit_batch_est(spectra: usize, peaks: usize) -> Vec<usize>{
     
 
     batches
-    
 }
 
 /// Keeps the total ammount that is loaded stable
 /// Loads ~80MB of data at a time. 
-/// Has much less effect than the fit_batch_est()
-/// Possibly better ways exist for this. 
-/// Depends on hardware what the optimal size is.
-///
-/// Output is a Vec<usize> of the indices of the bytes that need to be loaded.
-/// .window(2) is used over the vector containing with the start and end of what needs to be loaded
 fn transform_batch_est(spectra: usize, peaks: usize) -> Vec<usize>{
-    let batch_size = (20_000_000.0 / peaks as f32).floor() as usize;
-    let n_batches = (spectra as f32 / batch_size as f32).floor() as usize; 
+    let batch_size = (20_000_000.0 / peaks as f64).floor() as usize;
+    let n_batches = (spectra as f64 / batch_size as f64).floor() as usize; 
     let trailing_batch = spectra % batch_size;
     let exact = trailing_batch == 0;
 
