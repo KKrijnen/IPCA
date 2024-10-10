@@ -234,7 +234,7 @@ fn sign(input: f32) -> f32{
 // This function will search for larger batch sizes that have a last batch that has a peak ratio >19.
 fn fit_batch_est(spectra: usize, peaks: usize) -> Vec<usize>{
     let minimum_ratio:  usize = 19;
-    let mut batch_size: usize = peaks * 20;  // Initial Estimate
+    let mut batch_size: usize = peaks * minimum_ratio;  // Initial Estimate
     let mut trailing_batch = spectra % batch_size;
     let mut trailing_batch_ratio = trailing_batch / peaks;
     
